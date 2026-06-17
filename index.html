@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Premier Event Transport</title>
+  <style>
+    :root {
+      --primary: #2C3E50;
+      --accent: #D4AF37; /* Gold */
+      --light: #F8F9FA;
+      --dark: #1A1A1A;
+    }
+    body {
+      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: var(--light);
+      color: var(--dark);
+    }
+    /* Hero Mockup */
+    .hero {
+      background: linear-gradient(rgba(44, 62, 80, 0.8), rgba(44, 62, 80, 0.8)), url('https://images.unsplash.com/photo-1519225421980-715cb0215aed?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80') center/cover;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      text-align: center;
+      padding: 0 20px;
+    }
+    .hero h1 {
+      font-size: 4rem;
+      font-family: 'Georgia', serif;
+      margin-bottom: 10px;
+    }
+    .hero p {
+      font-size: 1.5rem;
+      font-weight: 300;
+      letter-spacing: 2px;
+      margin-bottom: 30px;
+    }
+    .btn {
+      background-color: var(--accent);
+      color: white;
+      padding: 15px 40px;
+      text-decoration: none;
+      font-size: 1.2rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      border-radius: 4px;
+    }
+
+    /* Chat Widget Styles */
+    #chat-widget {
+      position: fixed;
+      bottom: 30px;
+      right: 30px;
+      width: 380px;
+      height: 600px;
+      max-height: 80vh;
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      z-index: 1000;
+      transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      transform-origin: bottom right;
+    }
+    #chat-widget.closed {
+      transform: scale(0);
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    /* V4 Mobile Responsiveness - Full Screen Takeover */
+    @media (max-width: 480px) {
+      #chat-widget {
+        bottom: 0;
+        right: 0;
+        width: 100%;
+        height: 100%;
+        max-height: 100vh;
+        border-radius: 0;
+      }
+      #chat-launcher {
+        bottom: 20px;
+        right: 20px;
+      }
+    }
+    
+    #chat-launcher {
+      position: fixed;
+      bottom: 30px;
+      right: 30px;
+      width: 65px;
+      height: 65px;
+      background: var(--primary);
+      border-radius: 50%;
+      box-shadow: 0 6px 16px rgba(0,0,0,0.3);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 999;
+      color: white;
+      transition: transform 0.2s ease;
+    }
+    #chat-launcher:hover {
+      transform: scale(1.05);
+    }
+
+    .chat-header {
+      background: var(--primary);
+      color: white;
+      padding: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .chat-header h3 {
+      margin: 0;
+      font-size: 16px;
+      font-weight: 500;
+    }
+    .chat-close {
+      cursor: pointer;
+      font-size: 24px;
+      opacity: 0.8;
+      line-height: 1;
+    }
+    .chat-close:hover { opacity: 1; }
+
+    .chat-messages {
+      flex: 1;
+      padding: 20px;
+      overflow-y: auto;
+      background: #F8F9FA;
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+    
+    .msg {
+      max-width: 90%;
+      padding: 14px 18px;
+      border-radius: 12px;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+    .msg.bot {
+      background: white;
+      color: #333;
+      align-self: flex-start;
+      border: 1px solid #E5E7EB;
+      border-bottom-left-radius: 4px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+    }
+    .msg.user {
+      background: var(--primary);
+      color: white;
+      align-self: flex-end;
+      border-bottom-right-radius: 4px;
+      box-shadow: 0 2px 4px rgba(44, 62, 80, 0.2);
+    }
+
+    /* V4 Formatted Content */
+    .msg ul {
+      margin: 10px 0;
+      padding-left: 20px;
+    }
+    .msg li {
+      margin-bottom: 6px;
+    }
+    .msg strong {
+      color: var(--primary);
+    }
+    .msg a.link {
+      color: var(--accent);
+      text-decoration: none;
+      font-weight: bold;
+    }
+    .msg a.link:hover {
+      text-decoration: underline;
+    }
+    
+    /* V4 Deep Link Button UX */
+    .sms-button {
+      display: block;
+      background-color: var(--primary);
+      color: white !important;
+      text-align: center;
+      padding: 12px 16px;
+      border-radius: 8px;
+      text-decoration: none;
+      font-weight: bold;
+      margin-top: 15px;
+      font-size: 14px;
+      box-shadow: 0 4px 10px rgba(44, 62, 80, 0.2);
+      transition: background 0.2s ease;
+    }
+    .sms-button:hover {
+      background-color: #1A252F;
+    }
+    .sms-button svg {
+      vertical-align: middle;
+      margin-right: 6px;
+      margin-top: -2px;
+    }
+
+    .bot-question {
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid #f0f0f0;
+      font-style: italic;
+      color: #6B7280;
+    }
+    
+    .chat-input {
+      padding: 15px;
+      background: white;
+      border-top: 1px solid #eee;
+      display: flex;
+    }
+    .chat-input input {
+      flex: 1;
+      border: none;
+      outline: none;
+      font-size: 15px;
+    }
+    .chat-input button {
+      background: none;
+      border: none;
+      color: var(--accent);
+      font-weight: bold;
+      cursor: pointer;
+      font-size: 15px;
+    }
+
+    .quick-replies {
+      display: flex;
+      gap: 8px;
+      padding: 0 20px 10px;
+      background: #F8F9FA;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .quick-replies::-webkit-scrollbar { display: none; }
+    
+    .quick-reply {
+      background: white;
+      border: 1px solid var(--accent);
+      color: var(--primary);
+      padding: 8px 14px;
+      border-radius: 20px;
+      font-size: 13px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.2s ease;
+    }
+    .quick-reply:hover {
+      background: var(--accent);
+      color: white;
+    }
+    
+    .status-toast {
+      background: #10B981;
+      color: white;
+      padding: 10px;
+      text-align: center;
+      font-size: 12px;
+      font-weight: bold;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+<div data-demo-badge style="position:fixed;top:12px;right:12px;z-index:2147483647;background:#E8943A;color:#0a0a0a;font:600 11px/1 -apple-system,system-ui,sans-serif;padding:6px 11px;border-radius:100px;letter-spacing:.08em;text-transform:uppercase;box-shadow:0 2px 10px rgba(0,0,0,.45);pointer-events:none">Demo</div>
+
+  <div class="hero">
+    <h1>Premier Event Transport</h1>
+    <p>Luxury Wedding & Event Shuttles in the Houston area</p>
+    <a href="#" class="btn">View Our Fleet</a>
+  </div>
+
+  <div id="chat-launcher" onclick="toggleChat()">
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+  </div>
+
+  <div id="chat-widget" class="closed">
+    <div class="chat-header">
+      <div>
+        <h3>Premier Concierge</h3>
+        <span style="font-size: 11px; opacity: 0.8;">Online • Replies instantly</span>
+      </div>
+      <div class="chat-close" onclick="toggleChat()">×</div>
+    </div>
+    
+    <div class="status-toast" id="webhook-toast">✅ Valid 10-Digit Number - Webhook Sent!</div>
+
+    <div class="chat-messages" id="messages">
+      <!-- V5 Rewrite: Initial Greeting -->
+      <div class="msg bot">Welcome to Premier Event Transport! 💍 Whether you're planning a wedding, a corporate event, or an airport transfer, I'm here to handle the logistics so you don't have to.
+        <div class="bot-question">What kind of event are we planning for today?</div>
+      </div>
+    </div>
+    
+    <div class="quick-replies" id="quick-replies">
+      <div class="quick-reply" onclick="sendQuickReply('Get a Quote')">Get a Quote</div>
+      <div class="quick-reply" onclick="sendQuickReply('What vehicles do you have?')">Fleet Details</div>
+      <div class="quick-reply" onclick="sendQuickReply('Do you go to IAH?')">Airport Transfers</div>
+    </div>
+
+    <form class="chat-input" onsubmit="handleSend(event)">
+      <input type="text" id="userInput" placeholder="Type your message..." autocomplete="off">
+      <button type="submit">Send</button>
+    </form>
+  </div>
+
+  <script>
+    const messagesDiv = document.getElementById('messages');
+    const inputField = document.getElementById('userInput');
+    const widget = document.getElementById('chat-widget');
+    const qrDiv = document.getElementById('quick-replies');
+    const toast = document.getElementById('webhook-toast');
+
+    // Webhook State Machine
+    let flowState = 'general';
+    let leadData = { name: '', phone: '' };
+
+    // Set to open by default for demo
+    setTimeout(() => toggleChat(), 500);
+
+    function toggleChat() {
+      widget.classList.toggle('closed');
+    }
+
+    function addMessage(text, sender) {
+      const msg = document.createElement('div');
+      msg.className = `msg ${sender}`;
+      msg.innerHTML = text;
+      messagesDiv.appendChild(msg);
+      messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    }
+
+    function sendQuickReply(text) {
+      inputField.value = text;
+      handleSend(new Event('submit'));
+    }
+
+    function handleSend(e) {
+      e.preventDefault();
+      const text = inputField.value.trim();
+      if (!text) return;
+
+      addMessage(text, 'user');
+      inputField.value = '';
+
+      setTimeout(() => {
+        processFlow(text);
+      }, 800);
+    }
+
+    function processFlow(input) {
+      const lowerInput = input.toLowerCase();
+
+      // V4.1: Pricing & Budget Trap (Catching naked numbers, $, and keywords)
+      const hasNumber = /\b\d{2,4}\b/.test(lowerInput);
+      if (lowerInput.includes('budget') || lowerInput.includes('$') || lowerInput.includes('price') || lowerInput.includes('cost') || lowerInput.includes('how much') || lowerInput.includes('rent') || hasNumber) {
+        addMessage(`Hey, we don't directly give pricing over the chat because every event is unique! But here is how you can contact our coordination team to get a custom quote as quickly as possible.<br><br>
+        <a href="sms:5550100000?body=Hi%20Premier%20Team!%20I%20am%20chatting%20with%20your%20AI%20and%20want%20to%20get%20a%20pricing%20quote%20for%20an%20upcoming%20event." class="sms-button">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+          Text Us to Get a Quick Quote
+        </a>
+        <div class="bot-question">If you have any other questions about our vehicles in the meantime, feel free to let me know!</div>`, 'bot');
+        return;
+      }
+
+      // V4: Deflection Protocol (Competitor Spam)
+      if (lowerInput.includes('competitor') || lowerInput.includes('houston limo') || lowerInput.includes('better than')) {
+        addMessage(`We focus entirely on providing a flawless, 5-star experience for our own clients. I'd be happy to connect you with our coordination team to see if we are the perfect fit for your big day!<br>
+        <div class="bot-question">Would you like me to send you the link to request a quote?</div>`, 'bot');
+        return;
+      }
+
+      // Flow 2: Capturing Phone Number (V4 Spam Validation)
+      if (flowState === 'awaiting_phone') {
+        const digits = input.replace(/\D/g,'');
+        if (digits.length >= 10 && digits.length <= 11) {
+          leadData.phone = digits;
+          flowState = 'complete';
+          fireWebhook();
+          // V5 Rewrite
+          addMessage(`Got it! 🚀<br><br>I just securely transmitted your information to Chase's cell phone. He will text you shortly!<br>
+          <div class="bot-question">Are there any specific venues you are trying to coordinate travel between?</div>`, 'bot');
+        } else {
+          addMessage(`Hmm, that doesn't look like a valid phone number. Could you provide a real 10-digit number so Chase can text you?`, 'bot');
+        }
+        return;
+      }
+
+      // Flow 1: Capturing Name
+      if (flowState === 'awaiting_name') {
+        leadData.name = input;
+        flowState = 'awaiting_phone';
+        // V5 Rewrite
+        addMessage(`It is great to meet you, ${leadData.name}! To make this frictionless, what is the best cell phone number to reach you at? Our team will shoot you a quick text to gather the details for your quote.`, 'bot');
+        return;
+      }
+
+      // Standard Trigger for Handoff
+      if (lowerInput.includes('quote') || lowerInput.includes('book')) {
+        flowState = 'awaiting_name';
+        // V5 Rewrite
+        addMessage(`I would love to get a quote started for you! 💍<br><br>Because pricing depends heavily on your exact route, hours, and group size, our human coordination team handles quotes personally to make sure you get the absolute best rate.<br>
+        <div class="bot-question">What is your first and last name so I can get a file started for them?</div>`, 'bot');
+        return;
+      }
+      
+      // Fleet (V5 Rewrite)
+      if (lowerInput.includes('car') || lowerInput.includes('fleet') || lowerInput.includes('van') || lowerInput.includes('vehicle')) {
+        addMessage(`We specialize exclusively in luxury High-Top Ford Transit Vans. They are perfect for groups because they offer massive headroom (no crouching in wedding dresses or suits!) and are fully climate-controlled for the Texas heat. Depending on your group size, we can route multiple vans.<br>
+        <div class="bot-question">Roughly how many passengers are you looking to accommodate?</div>`, 'bot');
+        return;
+      }
+
+      // Airport (V5 Rewrite)
+      if (lowerInput.includes('airport') || lowerInput.includes('iah') || lowerInput.includes('hou')) {
+        addMessage(`Absolutely! We handle airport transfers across the Greater Houston area, including IAH, HOU, and private FBOs. We automatically track flights so you don't have to stress about delays, and our Transit vans have massive luggage capacity.<br>
+        <div class="bot-question">Are you looking for a standard drop-off, or a pick-up with our inside "Meet and Greet" service?</div>`, 'bot');
+        return;
+      }
+
+      // V5 Generic fallback
+      addMessage(`That is a really great question! Since I'm still learning the specifics of every unique route, I want to make sure you get a 100% accurate answer. The quickest way to get an answer is to shoot a quick text to our human coordination team—they usually reply in minutes.<br><br>
+      <a href="sms:5550100000?body=Hi%20Premier%20Team!%20I%20am%20chatting%20with%20your%20AI%20and%20had%20a%20question." class="sms-button">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+          Text a Human Now
+      </a>
+      <div class="bot-question">Or, I can tell you about our fleet options right now!</div>`, 'bot');
+    }
+
+    function fireWebhook() {
+      console.log("V4 Secured Webhook Fired:", leadData);
+      toast.style.display = 'block';
+      setTimeout(() => {
+        toast.style.display = 'none';
+      }, 4000);
+    }
+  </script>
+</body>
+</html>
